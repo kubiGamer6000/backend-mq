@@ -4,7 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "start:server": "node dist/server/index.js",
+    "start:worker": "node dist/worker/index.js",
+    "pm2:server": "pm2 start dist/server/index.js --name mantelo-server",
+    "pm2:worker": "pm2 start dist/worker/index.js --name mantelo-worker",
+    "pm2:start": "npm run build && pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop all",
+    "pm2:delete": "pm2 delete all"
   },
   "keywords": [],
   "author": "",
