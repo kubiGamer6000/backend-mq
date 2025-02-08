@@ -3,6 +3,7 @@ import amqp from "amqplib";
 import { v4 as uuidv4 } from "uuid";
 import type { MessageWithData } from "../types";
 import dotenv from "dotenv";
+import { getEnvVar } from "../config/env";
 
 dotenv.config();
 
@@ -12,7 +13,7 @@ let replyQueue: string;
 
 async function connectRabbitMQ() {
   connection = await amqp.connect(
-    process.env.RABBITMQ_URL || "amqp://localhost"
+    getEnvVar("RABBITMQ_URL") || "amqp://localhost"
   );
   channel = await connection.createChannel();
   await channel.assertQueue("chat_message_queue", { durable: true });

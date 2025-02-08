@@ -3,6 +3,7 @@ import { logger } from "../../utils/logger";
 import fs from "fs";
 import findConfig from "find-config";
 import dotenv from "dotenv";
+import { getEnvVar } from "../../config/env";
 dotenv.config({ path: findConfig(".env") || undefined });
 
 export class TelegramService {
@@ -12,27 +13,21 @@ export class TelegramService {
   private secondaryChatId: string | null = null;
 
   constructor() {
-    if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID) {
-      throw new Error("Telegram environment variables not set");
-    }
+    const token = getEnvVar("TELEGRAM_BOT_TOKEN");
+    const chatId = getEnvVar("TELEGRAM_CHAT_ID");
 
-    this.primaryBot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, {
+    this.primaryBot = new TelegramBot(token, {
       polling: false,
     });
-    this.primaryChatId = process.env.TELEGRAM_CHAT_ID;
+    this.primaryChatId = chatId;
 
     // Initialize secondary bot if credentials exist
-    if (
-      process.env.TELEGRAM_BOT_TOKEN_SECONDARY &&
-      process.env.TELEGRAM_CHAT_ID
-    ) {
+    if (getEnvVar("TELEGRAM_BOT_TOKEN_SECONDARY")) {
       this.secondaryBot = new TelegramBot(
-        process.env.TELEGRAM_BOT_TOKEN_SECONDARY,
-        {
-          polling: false,
-        }
+        getEnvVar("TELEGRAM_BOT_TOKEN_SECONDARY"),
+        { polling: false }
       );
-      this.secondaryChatId = process.env.TELEGRAM_CHAT_ID;
+      this.secondaryChatId = chatId;
     }
   }
 

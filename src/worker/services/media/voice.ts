@@ -5,7 +5,9 @@ import fs from "fs";
 import { logger } from "../../../utils/logger";
 import dotenv from "dotenv";
 import findConfig from "find-config";
-dotenv.config({ path: findConfig(".env") || undefined });
+dotenv.config({
+  path: findConfig(".env") || undefined,
+});
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 

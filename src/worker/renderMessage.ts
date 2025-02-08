@@ -4,12 +4,13 @@ import { VoiceProcessor } from "./services/media/voice";
 import { ImageProcessor } from "./services/media/image";
 import { MediaDownloader } from "./services/media/downloader";
 import { logger } from "../utils/logger";
+import { getEnvVar } from "../config/env";
 
 // Initialize services
-const voiceProcessor = new VoiceProcessor(process.env.OPENAI_API_KEY!);
+const voiceProcessor = new VoiceProcessor(getEnvVar("OPENAI_API_KEY"));
 const imageProcessor = new ImageProcessor(
-  process.env.OPENAI_API_KEY!,
-  process.env.IMAGE_PROMPT
+  getEnvVar("OPENAI_API_KEY"),
+  getEnvVar("IMAGE_PROMPT")
 );
 const mediaDownloader = new MediaDownloader();
 

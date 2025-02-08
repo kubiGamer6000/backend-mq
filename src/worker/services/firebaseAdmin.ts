@@ -1,16 +1,10 @@
 import admin from "firebase-admin";
-import dotenv from "dotenv";
-import findConfig from "find-config";
-
-dotenv.config({ path: findConfig(".env") || undefined });
+import { getEnvVar } from "../../config/env";
 
 function getServiceAccount() {
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-    throw new Error("FIREBASE_SERVICE_ACCOUNT environment variable is not set");
-  }
-
+  const serviceAccount = getEnvVar("FIREBASE_SERVICE_ACCOUNT");
   try {
-    const buff = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, "base64");
+    const buff = Buffer.from(serviceAccount, "base64");
     return JSON.parse(buff.toString("utf-8"));
   } catch (error) {
     console.error("Error parsing service account:", error);

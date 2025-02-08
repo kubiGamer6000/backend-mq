@@ -3,15 +3,12 @@ import { MessageWithData, RenderedMessage } from "../../types";
 import { logger } from "../../utils/logger";
 import fs from "fs";
 import path from "path";
-
+import { getEnvVar } from "../../config/env";
 export class FirebaseService {
   private bucket;
 
   constructor() {
-    if (!process.env.FIREBASE_STORAGE_BUCKET) {
-      throw new Error("FIREBASE_STORAGE_BUCKET is not set");
-    }
-    this.bucket = admin.storage().bucket(process.env.FIREBASE_STORAGE_BUCKET);
+    this.bucket = admin.storage().bucket(getEnvVar("FIREBASE_STORAGE_BUCKET"));
   }
 
   async uploadMedia(

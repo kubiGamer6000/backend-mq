@@ -2,25 +2,28 @@ import pkg from "whatsapp-web.js";
 const { Client, LocalAuth } = pkg;
 import qrcode from "qrcode-terminal";
 import qr from "qr-image";
-import dotenv from "dotenv";
+
 import fs from "fs";
 import { logger } from "../utils/logger";
 import { telegramService } from "../worker/services/telegram";
 import { publishMessage, publishEditEvent } from "./rabbitmq";
 import type { MessageWithData } from "../types";
-import findConfig from "find-config";
+
 import express from "express";
+import { getEnvVar } from "../config/env";
 
 const app = express();
 
-dotenv.config({ path: findConfig(".env") || undefined });
+import dotenv from "dotenv";
+import findConfig from "find-config";
+dotenv.config({ path: findConfig(".env") || "../.env" });
 
 const client = new Client({
   puppeteer: {
     args: ["--no-sandbox"],
   },
   authStrategy: new LocalAuth({
-    clientId: process.env.WHATSAPP_CLIENT_ID || "",
+    clientId: getEnvVar("WHATSAPP_CLIENT_ID"),
   }),
 });
 client.on("qr", async (qrData) => {

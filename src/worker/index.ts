@@ -12,7 +12,8 @@ import { sendToAgent } from "./agent";
 
 import type { MessageWithData } from "../types";
 import amqp from "amqplib";
-dotenv.config({ path: findConfig(".env") || undefined });
+import { getEnvVar } from "../config/env";
+dotenv.config({ path: findConfig(".env") || ".env" });
 
 let userBuffers: {
   [key: string]: {
@@ -22,9 +23,7 @@ let userBuffers: {
 } = {};
 
 async function startWorker() {
-  const connection = await amqp.connect(
-    process.env.RABBITMQ_URL || "amqp://localhost"
-  );
+  const connection = await amqp.connect(getEnvVar("RABBITMQ_URL"));
   const channel = await connection.createChannel();
   await channel.assertQueue("chat_message_queue", { durable: true });
   await channel.assertQueue("chat_edit_message_queue", { durable: true });

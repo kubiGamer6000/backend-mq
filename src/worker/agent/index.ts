@@ -9,11 +9,11 @@ import {
   ChatCompletionTool,
 } from "openai/resources/chat/completions";
 import { db } from "../services/firebaseAdmin";
-
-dotenv.config({ path: findConfig(".env") || undefined });
+import { getEnvVar } from "../../config/env";
+dotenv.config({ path: findConfig(".env") || "../../.env" });
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: getEnvVar("OPENAI_API_KEY"),
 });
 
 const client = Instructor({
