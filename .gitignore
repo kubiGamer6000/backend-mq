@@ -1,3 +1,5 @@
 .env
 src/.env
 node_modules
+src/server/.wwebjs_auth
+src/server/.wwebjs_cache
