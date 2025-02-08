@@ -1,0 +1,147 @@
+import pkg from "whatsapp-web.js";
+const { Client, LocalAuth } = pkg;
+import dotenv from "dotenv";
+import qrcode from "qrcode-terminal";
+import qr from "qr-image";
+import fs from "fs";
+import renderMessage from "./renderMessage";
+import { firebaseService } from "./services/firebase";
+import { telegramService } from "./services/telegram";
+import { logger } from "../utils/logger";
+import { preProcess } from "./services/media/ssProcess";
+import { db } from "./services/firebaseAdmin";
+
+type MessageWithData = pkg.Message & { _data: any };
+
+dotenv.config();
+
+const client = new Client({
+  puppeteer: {
+    args: ["--no-sandbox"],
+  },
+  authStrategy: new LocalAuth({
+    clientId: process.env.WHATSAPP_CLIENT_ID || "",
+  }),
+});
+
+client.on("qr", async (qrData) => {
+  logger.startSection("QR Code Generation");
+  logger.log("QR code received");
+
+  qrcode.generate(qrData, { small: true });
+
+  const qrImage = qr.image(qrData, { type: "png" });
+  const randomId = Math.random().toString(36).substring(2, 15);
+  const filePath = `./qrs/qr_code_${randomId}.png`;
+
+  // Ensure qrs directory exists
+  if (!fs.existsSync("./qrs")) {
+    fs.mkdirSync("./qrs", { recursive: true });
+  }
+
+  await new Promise((resolve, reject) => {
+    const writeStream = fs.createWriteStream(filePath);
+    qrImage.pipe(writeStream);
+    writeStream.on("finish", () => resolve(undefined));
+    writeStream.on("error", reject);
+  });
+
+  // Send both photo and notification
+  await telegramService.sendPhoto(filePath, "New WhatsApp QR Code");
+
+  // Cleanup
+  fs.unlinkSync(filePath);
+
+  logger.endSection("QR Code Generation");
+});
+
+client.on("message_create", async (message: MessageWithData) => {
+  logger.startSection("Message Processing");
+
+  try {
+    const rendered = await renderMessage(message);
+
+    if (rendered.mediaPath) {
+      const localFilePath = rendered.mediaPath;
+      const chatId = message.from.replace(/[@].+$/, "");
+
+      rendered.mediaPath = await firebaseService.uploadMedia(
+        localFilePath,
+        chatId,
+        rendered.mediaType
+      );
+
+      if (fs.existsSync(localFilePath)) {
+        fs.unlinkSync(localFilePath);
+      }
+    }
+
+    await preProcess(rendered);
+
+    await firebaseService.storeMessage(rendered);
+
+    logger.endSection("Message Processing");
+  } catch (error) {
+    logger.error("Error processing message", error);
+    await telegramService.sendError(`Error processing message: ${error}`);
+  }
+});
+
+client.on(
+  "message_edit",
+  async (message: MessageWithData, newBody: string, prevBody: string) => {
+    // Check if the message is stored in Firestore
+    logger.startSection("Message Edit");
+    logger.log(`Message edited from ${prevBody} to ${newBody}`);
+    logger.log(`Updating Firestore`);
+
+    const docId = await firebaseService.editMessage(message, prevBody, newBody);
+    if (!docId) {
+      logger.log("Message not found in Firestore");
+      return;
+    }
+    logger.log(`Message updated in Firestore: ${docId}`);
+
+    logger.endSection("Message Edit");
+    // Update the message in Firestore, keeping count of edits
+  }
+);
+
+client.on(
+  "message_revoke_everyone",
+  async (message: MessageWithData, revokedMessage: MessageWithData | null) => {
+    // message - the message that was revoked, in its current state (no original msg data)
+    // revokedMessage - the original message data, before it was revoked (may be null)
+
+    // Check if the message is stored in Firestore
+    // Update the message in Firestore, keeping count of revokes
+
+    logger.startSection("Message Revoke");
+    logger.log(`Message revoked: ${JSON.stringify(message)}`);
+    logger.log(`Revoked message: ${JSON.stringify(revokedMessage)}`);
+    logger.endSection("Message Revoke");
+  }
+);
+
+client.on("ready", async () => {
+  logger.log("WhatsApp client is ready");
+});
+
+client.on("auth_failure", async (msg) => {
+  logger.error("Authentication failed", msg);
+  await telegramService.sendError(`Authentication failed: ${msg}`);
+});
+
+client.on("disconnected", async (reason) => {
+  logger.error("Client disconnected", reason);
+  await telegramService.sendError(`Client disconnected: ${reason}`);
+});
+
+process.on("unhandledRejection", async (reason, promise) => {
+  logger.error("Unhandled Rejection", { reason, promise });
+  await telegramService.sendError(
+    `Unhandled Rejection at: ${promise} reason: ${reason}`
+  );
+});
+
+client.initialize();
